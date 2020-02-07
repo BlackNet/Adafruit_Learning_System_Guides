@@ -17,10 +17,16 @@ from puff_detector import PuffDetector, STARTED, DETECTED, WAITING
 # # the keyboard object!
 # kbd = Keyboard()
 
- # pylint:disable=unused-variable,too-many-locals
+# pylint:disable=unused-variable,too-many-locals
 
-def display_info(input_type_str, duration_str, press_str, puff_detector):
-    state_str = state_mapper[puff_detector.state][0]
+
+def display_info(
+        input_type_str, duration_str, press_str, puff_detector, state_mapper_2, puff_stat
+):
+    polarity, peak_level, duration  = puff_stat
+    print("pol:", polarity)
+    print("state:", puff_detector.state)
+    state_str = state_mapper_2[puff_detector.state][polarity][0]
 
     min_press_str = "min: %d" % puff_detector.min_pressure
     high_press_str = "hi: %d" % puff_detector.high_pressure
@@ -114,6 +120,15 @@ state_mapper = {
     DETECTED: ("Detected",),
 }
 
+state_mapper_too = {
+    WAITING: {0: ("Waiting for Input",),},
+    STARTED: {1: ("PUFF STARTED",), -1: ("SIP STARTED",),},
+    DETECTED: {
+        1: ("Detected", (None, ("SOFT PUFF", SOFT_PUFF), ("HARD PUFF", HARD_PUFF))),
+        -1: ("Detected", (None, ("SOFT SIP", SOFT_SIP), ("HARD SIP", HARD_SIP))),
+    },
+}
+
 state_display_timeout = 1.0
 state_display_start = 0
 while True:
@@ -124,27 +139,19 @@ while True:
     current_pressure = lps.pressure
     pressure_string = "Press: %0.3f" % current_pressure
 
-    puff_polarity, puff_peak_level, puff_duration = detector.check_for_puff(
-        current_pressure
-    )
+    puff_status = detector.check_for_puff(current_pressure)
+    puff_polarity, puff_peak_level, puff_duration = puff_status
     if detector.state == DETECTED:
         duration_string = "Duration: %0.2f" % puff_duration
 
         input_type_string, input_type = input_mapper[puff_polarity][puff_peak_level]
         state_display_start = curr_time
 
-    elif detector.state == STARTED:
-        dir_string = ""
-        if puff_polarity == 1:
-            dir_string = "PUFF"
-        if puff_polarity == -1:
-            dir_string = "SIP"
-
     elif detector.state == WAITING:
         if (curr_time - state_display_start) > detector.display_timeout:
             input_type_string = " "
             duration_string = " "
 
-    ########### process displaying info ###################
-
-    display_info(input_type_string, duration_string, pressure_string, detector)
+    display_info(
+        input_type_string, duration_string, pressure_string, detector, state_mapper_too, puff_status
+    )

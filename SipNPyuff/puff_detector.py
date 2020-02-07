@@ -1,6 +1,9 @@
 import time
 import os
 import json
+import terminalio
+from adafruit_display_text import label
+from displayio import Group
 
 CONSOLE = False
 DEBUG = True
@@ -11,15 +14,32 @@ WAITING = 0
 STARTED = 1
 DETECTED = 2
 
+COLOR = 0xFFFFFF
+FONT = terminalio.FONT
 
+DISPLAY_WIDTH = 128
+DISPLAY_HEIGHT = 64
+Y_OFFSET = 3
+TEXT_HEIGHT = 8
+BOTTOM_ROW = DISPLAY_HEIGHT - TEXT_HEIGHT
+BANNER_STRING = "PUFF-O-TRON-9000"
+pressure_string = " "
+input_type_string = " "
+# duration_str = " "
+# pylint:disable=too-many-locals
 class PuffDetector:
     def __init__(
             self,
+            display,
             min_pressure=MIN_PRESSURE,
             high_pressure=HIGH_PRESSURE,
             config_filename="settings.json",
             display_timeout=1,
     ):
+        self.display = display
+        self.state_display_start = time.monotonic()
+        self.detection_result_str = ""
+        self.duration_str = ""
         self.high_pressure = high_pressure
         self.min_pressure = min_pressure
         self.current_pressure = 0
@@ -143,3 +163,66 @@ class PuffDetector:
             type_detected = input_type_str[0]
             log_str = "%s::%s::DURATION:%0.3f"%(state_str, type_detected, duration)
             print(log_str)
+
+    def update_display(self, press_str, state_map, puff_stat):
+        curr_time = time.monotonic()
+        polarity, peak_level, duration  = puff_stat
+
+        state_str = state_map[self.state][polarity][0]
+        input_type_str = state_map[self.state][polarity][1][peak_level]
+
+
+        if self.state == DETECTED:
+            self.duration_str = "Duration: %0.2f" % duration
+
+
+            self.detection_result_str = input_type_str[0]
+            self.state_display_start = curr_time
+
+        elif self.state == WAITING:
+            display_elapsed = (curr_time - self.state_display_start)
+            if display_elapsed > self.display_timeout:
+                self.detection_result_str = " "
+                self.duration_str = " "
+
+        min_press_str = "min: %d" % self.min_pressure
+        high_press_str = "hi: %d" % self.high_pressure
+        banner = label.Label(FONT, text=BANNER_STRING, color=COLOR)
+        state = label.Label(FONT, text=state_str, color=COLOR)
+        detector_result = label.Label(FONT, text= self.detection_result_str, color=COLOR)
+        duration = label.Label(FONT, text=self.duration_str, color=COLOR)
+        min_pressure_label = label.Label(FONT, text=min_press_str, color=COLOR)
+        high_pressure_label = label.Label(FONT, text=high_press_str, color=COLOR)
+        pressure_label = label.Label(FONT, text=press_str, color=COLOR)
+
+        banner.x = 0
+        banner.y = 0 + Y_OFFSET
+
+        state.x = 10
+        state.y = 10 + Y_OFFSET
+
+        detector_result.x = 10
+        detector_result.y = 20 + Y_OFFSET
+
+        duration.x = 10
+        duration.y = 30 + Y_OFFSET
+
+        min_pressure_label.x = 0
+        min_pressure_label.y = BOTTOM_ROW - 10
+
+        pressure_label.x = DISPLAY_WIDTH - pressure_label.bounding_box[2]
+        pressure_label.y = BOTTOM_ROW
+
+        high_pressure_label.x = 0
+        high_pressure_label.y = BOTTOM_ROW
+
+        splash = Group(max_size=10)
+        splash.append(banner)
+        splash.append(state)
+        splash.append(detector_result)
+        splash.append(duration)
+        splash.append(min_pressure_label)
+        splash.append(high_pressure_label)
+        splash.append(pressure_label)
+
+        self.display.show(splash)

@@ -17,20 +17,15 @@ from puff_detector import PuffDetector, STARTED, DETECTED, WAITING
 # # the keyboard object!
 # kbd = Keyboard()
 
-# pylint:disable=unused-variable,too-many-locals
+# pylint:disable=unused-variable,too-many-locals,unused-argument
 
 
-def display_info(duration_str, press_str, puff_detector, state_mapper_2, puff_stat):
+def update_display(duration_str, press_str, puff_detector, state_map, puff_stat):
     polarity, peak_level, duration  = puff_stat
-    print("state:", puff_detector.state)
-    print("pol:", polarity)
-    print("peak:", peak_level)
 
-    state_str = state_mapper_2[puff_detector.state][polarity][0]
-    input_type_str = state_mapper_2[puff_detector.state][polarity][1][peak_level]
+    state_str = state_map[puff_detector.state][polarity][0]
+    input_type_str = state_map[puff_detector.state][polarity][1][peak_level]
 
-        # input_type_string, input_type = input_mapper[puff_polarity][puff_peak_level]
-    # input_type_str = state_mapper_2[pu]
     min_press_str = "min: %d" % puff_detector.min_pressure
     high_press_str = "hi: %d" % puff_detector.high_pressure
 
@@ -111,21 +106,10 @@ pressure_string = " "
 input_type_string = " "
 duration_string = " "
 
-# maps a combination of polarity and peak_level to an input_type
-input_mapper = {
-    1: (None, ("SOFT PUFF", SOFT_PUFF), ("HARD PUFF", HARD_PUFF)),
-    -1: (None, ("SOFT SIP", SOFT_SIP), ("HARD SIP", HARD_SIP)),
-}
+print("minimum pressure:", detector.min_pressure)
+print("high pressure threshold:", detector.high_pressure)
 
 state_mapper = {
-    WAITING: ("Waiting for Input",),
-    STARTED: ("Input started",),
-    DETECTED: ("Detected",),
-}
-# state: STARTED
-# pol: 1
-# peak: None
-state_mapper_too = {
     # STATE
     WAITING: {
         # POLARITY
@@ -195,7 +179,6 @@ state_display_start = 0
 while True:
     detected_puff = None
     curr_time = time.monotonic()
-    # Set text, font, and color
 
     current_pressure = lps.pressure
     pressure_string = "Press: %0.3f" % current_pressure
@@ -205,7 +188,6 @@ while True:
     if detector.state == DETECTED:
         duration_string = "Duration: %0.2f" % puff_duration
 
-        input_type_string, input_type = input_mapper[puff_polarity][puff_peak_level]
         state_display_start = curr_time
 
     elif detector.state == WAITING:
@@ -213,4 +195,5 @@ while True:
             input_type_string = " "
             duration_string = " "
 
-    display_info(duration_string, pressure_string, detector, state_mapper_too, puff_status)
+    update_display(duration_string, pressure_string, detector, state_mapper, puff_status)
+    detector.log_state_change(state_mapper, puff_status)

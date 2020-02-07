@@ -22,7 +22,7 @@ class PuffDetector:
     ):
         self.high_pressure = high_pressure
         self.min_pressure = min_pressure
-
+        self.current_pressure = 0
         self.start_polarity = 0
         self.peak_level = 0
         self.counter = 0
@@ -30,6 +30,7 @@ class PuffDetector:
         self.puff_start = 0
         self.state = WAITING
         self.settings_dict = {}
+        self.prev_state = self.state
 
         self.display_timeout = display_timeout
 
@@ -90,6 +91,8 @@ class PuffDetector:
 
     def check_for_puff(self, current_pressure):
         """Updates the internal state to detect if a sip/puff has been started or stopped"""
+
+        self.current_pressure = current_pressure
         puff_peak_level = None
         puff_duration = None
         polarity, level = self.catagorize_pressure(current_pressure)
@@ -121,3 +124,22 @@ class PuffDetector:
 
         self.counter += 1
         return (self.start_polarity, puff_peak_level, puff_duration)
+
+    def log_state_change(self, state_map, puff_stat):
+        state_changed = self.prev_state == self.state
+        self.prev_state = self.state
+        if state_changed:
+            return
+        polarity, peak_level, duration  = puff_stat
+
+        state_str = state_map[self.state][polarity][0]
+        input_type_str = state_map[self.state][polarity][1][peak_level]
+        state_str = state_str.replace(" ", "_").upper()
+        if self.state is WAITING:
+            print(state_str)
+        if self.state is STARTED:
+            print(state_str.replace(" ", "_").upper())
+        if self.state is DETECTED:
+            type_detected = input_type_str[0]
+            log_str = "%s::%s::DURATION:%0.3f"%(state_str, type_detected, duration)
+            print(log_str)

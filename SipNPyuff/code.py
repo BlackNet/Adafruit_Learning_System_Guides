@@ -3,7 +3,7 @@ import board
 import displayio
 import adafruit_displayio_ssd1306
 import adafruit_lps35hw
-from puff_detector import PuffDetector, STARTED, DETECTED, WAITING
+from puff_detector import PuffDetector
 
 # from adafruit_hid.keyboard import Keyboard
 # from adafruit_hid.keycode import Keycode
@@ -16,11 +16,6 @@ from puff_detector import PuffDetector, STARTED, DETECTED, WAITING
 # kbd = Keyboard()
 
 displayio.release_displays()
-
-SOFT_SIP = 0
-HARD_SIP = 1
-SOFT_PUFF = 2
-HARD_PUFF = 3
 
 DISPLAY_WIDTH = 128
 DISPLAY_HEIGHT = 64
@@ -43,71 +38,6 @@ time.sleep(1)
 print("minimum pressure:", detector.min_pressure)
 print("high pressure threshold:", detector.high_pressure)
 
-state_mapper = {
-    # STATE
-    WAITING: {
-        # POLARITY
-        0: (
-            # STATE STRING
-            "Waiting for Input",
-            {
-                # PEAK LEVEL
-                None:" ",
-                # 0: N/A
-                # 1: N/A
-            }
-        ),
-    },
-
-    # STATE
-    STARTED: {
-        # POLARITY
-        1: (
-            # STATE STRING
-            "PUFF STARTED",
-            {
-                # PEAK LEVEL
-                None:" ",
-                # 0: N/A
-                # 1: N/A
-            },
-        ),
-        -1: (
-            # STATE STRING
-            "SIP STARTED",
-            {
-                # PEAK LEVEL
-                None:" ",
-                # 0: N/A
-                # 1: N/A
-            },
-        ),
-    }, # state: 2,  pol: 1, 1, peak: 2
-
-    # STATE
-    DETECTED: {
-        # POLARITY
-        1: (
-            # STATE STRING
-            " ",
-            (
-                None,
-                ("SOFT PUFF DETECTED", SOFT_PUFF),
-                ("HARD PUFF DETECTED", HARD_PUFF)
-            )
-        ),
-        -1: (
-            # STATE STRING
-            "Detected",
-            (
-                None,
-                ("SOFT SIP", SOFT_SIP),
-                ("HARD SIP", HARD_SIP)
-            )
-        ),
-    },
-}
-
 state_display_timeout = 1.0
 state_display_start = 0
 while True:
@@ -121,5 +51,5 @@ while True:
     puff_polarity, puff_peak_level, puff_duration = puff_status
 
 
-    detector.update_display(pressure_string, state_mapper, puff_status)
-    detector.log_state_change(state_mapper, puff_status)
+    detector.update_display(pressure_string, puff_status)
+    detector.log_state_change(puff_status)

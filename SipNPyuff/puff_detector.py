@@ -14,6 +14,11 @@ WAITING = 0
 STARTED = 1
 DETECTED = 2
 
+SOFT_SIP = 0
+HARD_SIP = 1
+SOFT_PUFF = 2
+HARD_PUFF = 3
+
 COLOR = 0xFFFFFF
 FONT = terminalio.FONT
 
@@ -27,6 +32,72 @@ pressure_string = " "
 input_type_string = " "
 # duration_str = " "
 # pylint:disable=too-many-locals
+
+STATE_MAP = {
+    # STATE
+    WAITING: {
+        # POLARITY
+        0: (
+            # STATE STRING
+            "Waiting for Input",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            }
+        ),
+    },
+
+    # STATE
+    STARTED: {
+        # POLARITY
+        1: (
+            # STATE STRING
+            "PUFF STARTED",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            },
+        ),
+        -1: (
+            # STATE STRING
+            "SIP STARTED",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            },
+        ),
+    }, # state: 2,  pol: 1, 1, peak: 2
+
+    # STATE
+    DETECTED: {
+        # POLARITY
+        1: (
+            # STATE STRING
+            " ",
+            (
+                None,
+                ("SOFT PUFF DETECTED", SOFT_PUFF),
+                ("HARD PUFF DETECTED", HARD_PUFF)
+            )
+        ),
+        -1: (
+            # STATE STRING
+            "Detected",
+            (
+                None,
+                ("SOFT SIP", SOFT_SIP),
+                ("HARD SIP", HARD_SIP)
+            )
+        ),
+    },
+}
+
 class PuffDetector:
     def __init__(
             self,
@@ -145,15 +216,15 @@ class PuffDetector:
         self.counter += 1
         return (self.start_polarity, puff_peak_level, puff_duration)
 
-    def log_state_change(self, state_map, puff_stat):
+    def log_state_change(self, puff_stat):
         state_changed = self.prev_state == self.state
         self.prev_state = self.state
         if state_changed:
             return
         polarity, peak_level, duration  = puff_stat
 
-        state_str = state_map[self.state][polarity][0]
-        input_type_str = state_map[self.state][polarity][1][peak_level]
+        state_str = STATE_MAP[self.state][polarity][0]
+        input_type_str = STATE_MAP[self.state][polarity][1][peak_level]
         state_str = state_str.replace(" ", "_").upper()
         if self.state is WAITING:
             print(state_str)
@@ -164,12 +235,12 @@ class PuffDetector:
             log_str = "%s::%s::DURATION:%0.3f"%(state_str, type_detected, duration)
             print(log_str)
 
-    def update_display(self, press_str, state_map, puff_stat):
+    def update_display(self, press_str, puff_stat):
         curr_time = time.monotonic()
         polarity, peak_level, duration  = puff_stat
 
-        state_str = state_map[self.state][polarity][0]
-        input_type_str = state_map[self.state][polarity][1][peak_level]
+        state_str = STATE_MAP[self.state][polarity][0]
+        input_type_str = STATE_MAP[self.state][polarity][1][peak_level]
 
 
         if self.state == DETECTED:

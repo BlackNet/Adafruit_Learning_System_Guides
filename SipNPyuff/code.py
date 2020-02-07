@@ -20,20 +20,23 @@ from puff_detector import PuffDetector, STARTED, DETECTED, WAITING
 # pylint:disable=unused-variable,too-many-locals
 
 
-def display_info(
-        input_type_str, duration_str, press_str, puff_detector, state_mapper_2, puff_stat
-):
+def display_info(duration_str, press_str, puff_detector, state_mapper_2, puff_stat):
     polarity, peak_level, duration  = puff_stat
-    print("pol:", polarity)
     print("state:", puff_detector.state)
-    state_str = state_mapper_2[puff_detector.state][polarity][0]
+    print("pol:", polarity)
+    print("peak:", peak_level)
 
+    state_str = state_mapper_2[puff_detector.state][polarity][0]
+    input_type_str = state_mapper_2[puff_detector.state][polarity][1][peak_level]
+
+        # input_type_string, input_type = input_mapper[puff_polarity][puff_peak_level]
+    # input_type_str = state_mapper_2[pu]
     min_press_str = "min: %d" % puff_detector.min_pressure
     high_press_str = "hi: %d" % puff_detector.high_pressure
 
     banner = label.Label(font, text=banner_string, color=color)
     state = label.Label(font, text=state_str, color=color)
-    detector_result = label.Label(font, text=input_type_str, color=color)
+    detector_result = label.Label(font, text= input_type_string, color=color)
     duration = label.Label(font, text=duration_str, color=color)
     min_pressure_label = label.Label(font, text=min_press_str, color=color)
     high_pressure_label = label.Label(font, text=high_press_str, color=color)
@@ -119,13 +122,71 @@ state_mapper = {
     STARTED: ("Input started",),
     DETECTED: ("Detected",),
 }
-
+# state: STARTED
+# pol: 1
+# peak: None
 state_mapper_too = {
-    WAITING: {0: ("Waiting for Input",),},
-    STARTED: {1: ("PUFF STARTED",), -1: ("SIP STARTED",),},
+    # STATE
+    WAITING: {
+        # POLARITY
+        0: (
+            # STATE STRING
+            "Waiting for Input",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            }
+        ),
+    },
+
+    # STATE
+    STARTED: {
+        # POLARITY
+        1: (
+            # STATE STRING
+            "PUFF STARTED",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            },
+        ),
+        -1: (
+            # STATE STRING
+            "SIP STARTED",
+            {
+                # PEAK LEVEL
+                None:" ",
+                # 0: N/A
+                # 1: N/A
+            },
+        ),
+    }, # state: 2,  pol: 1, 1, peak: 2
+
+    # STATE
     DETECTED: {
-        1: ("Detected", (None, ("SOFT PUFF", SOFT_PUFF), ("HARD PUFF", HARD_PUFF))),
-        -1: ("Detected", (None, ("SOFT SIP", SOFT_SIP), ("HARD SIP", HARD_SIP))),
+        # POLARITY
+        1: (
+            # STATE STRING
+            "Detected",
+            (
+                None,
+                ("SOFT PUFF", SOFT_PUFF),
+                ("HARD PUFF", HARD_PUFF)
+            )
+        ),
+        -1: (
+            # STATE STRING
+            "Detected",
+            (
+                None,
+                ("SOFT SIP", SOFT_SIP),
+                ("HARD SIP", HARD_SIP)
+            )
+        ),
     },
 }
 
@@ -152,6 +213,4 @@ while True:
             input_type_string = " "
             duration_string = " "
 
-    display_info(
-        input_type_string, duration_string, pressure_string, detector, state_mapper_too, puff_status
-    )
+    display_info(duration_string, pressure_string, detector, state_mapper_too, puff_status)

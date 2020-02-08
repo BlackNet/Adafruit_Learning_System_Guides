@@ -35,13 +35,12 @@ lps.filter_config = True
 detector = PuffDetector(display)
 time.sleep(1)
 
-print("minimum pressure:", detector.min_pressure)
-print("high pressure threshold:", detector.high_pressure)
+print("MIN_PRESSURE::", detector.min_pressure)
+print("HIGH_PRESSURE_THRESHOLD::", detector.high_pressure)
 
 state_display_timeout = 1.0
 state_display_start = 0
 while True:
-    detected_puff = None
     curr_time = time.monotonic()
 
     current_pressure = lps.pressure
@@ -50,6 +49,4 @@ while True:
     puff_status = detector.check_for_puff(current_pressure)
     puff_polarity, puff_peak_level, puff_duration = puff_status
 
-
     detector.update_display(pressure_string, puff_status)
-    detector.log_state_change(puff_status)

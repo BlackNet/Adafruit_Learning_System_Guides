@@ -31,7 +31,7 @@ BANNER_STRING = "PUFF-O-TRON-9000"
 pressure_string = " "
 input_type_string = " "
 # duration_str = " "
-# pylint:disable=too-many-locals
+# pylint:disable=too-many-locals,exec-used,eval-used
 
 STATE_MAP = {
     # STATE
@@ -39,7 +39,7 @@ STATE_MAP = {
         # POLARITY
         0: (
             # STATE STRING
-            "Waiting for Input",
+            "WAITING FOR INPUT",
             {
                 # PEAK LEVEL
                 None:" ",
@@ -47,6 +47,7 @@ STATE_MAP = {
                 # 1: N/A
             }
         ),
+        "name":"WAITING"
     },
 
     # STATE
@@ -72,6 +73,8 @@ STATE_MAP = {
                 # 1: N/A
             },
         ),
+
+        "name":"STARTED"
     }, # state: 2,  pol: 1, 1, peak: 2
 
     # STATE
@@ -79,11 +82,11 @@ STATE_MAP = {
         # POLARITY
         1: (
             # STATE STRING
-            " ",
+            "Detected",
             (
                 None,
-                ("SOFT PUFF DETECTED", SOFT_PUFF),
-                ("HARD PUFF DETECTED", HARD_PUFF)
+                ("SOFT PUFF", SOFT_PUFF),
+                ("HARD PUFF", HARD_PUFF)
             )
         ),
         -1: (
@@ -95,7 +98,9 @@ STATE_MAP = {
                 ("HARD SIP", HARD_SIP)
             )
         ),
+        "name":"DETECTED"
     },
+
 }
 
 class PuffDetector:
@@ -122,16 +127,20 @@ class PuffDetector:
         self.state = WAITING
         self.settings_dict = {}
         self.prev_state = self.state
-
+        self.state_callbacks = []
         self.display_timeout = display_timeout
 
         self._config_filename = config_filename
         self._load_config()
         if self.settings_dict:
-            self.min_pressure = self.settings_dict["min_pressure"]
-            self.high_pressure = self.settings_dict["high_pressure"]
-            if "display_timeout" in self.settings_dict.keys():
-                self.display_timeout = self.settings_dict["display_timeout"]
+            if "MIN_PRESSURE" in self.settings_dict.keys():
+                self.min_pressure = self.settings_dict["MIN_PRESSURE"]
+            if "HIGH_PRESSURE" in self.settings_dict.keys():
+                self.high_pressure = self.settings_dict["HIGH_PRESSURE"]
+            if "DISPLAY_TIMEOUT" in self.settings_dict.keys():
+                self.display_timeout = self.settings_dict["DISPLAY_TIMEOUT"]
+            if "ACTIONS" in self.settings_dict.keys():
+                self.actions = self.settings_dict['ACTIONS']
 
     def _load_config(self):
         if not self._config_filename in os.listdir("/"):
@@ -214,7 +223,31 @@ class PuffDetector:
             puff_duration = self.duration
 
         self.counter += 1
-        return (self.start_polarity, puff_peak_level, puff_duration)
+        puff_status =  (self.start_polarity, puff_peak_level, puff_duration)
+        self.process_actions(puff_status)
+
+        return puff_status
+
+    def process_actions(self, puff_stat):
+        state_changed = self.prev_state == self.state
+        self.prev_state = self.state
+        if state_changed:
+            return
+
+        for action, action_class in self.actions:
+            exec("import %s"%action)
+
+            safe_locals = {
+                "self": self,
+                "puff_stat":puff_stat,
+                "state_map" : STATE_MAP,
+                action : eval(action),
+            }
+            exec("%s.%s.run(self, state_map, puff_stat)"%(action, action_class), {} , safe_locals)
+
+
+
+
 
     def log_state_change(self, puff_stat):
         state_changed = self.prev_state == self.state
@@ -245,7 +278,6 @@ class PuffDetector:
 
         if self.state == DETECTED:
             self.duration_str = "Duration: %0.2f" % duration
-
 
             self.detection_result_str = input_type_str[0]
             self.state_display_start = curr_time
